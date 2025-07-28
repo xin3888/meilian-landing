@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp API 管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f0f2f5;
+            color: #1c1e21;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: #128c7e;
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 500;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .card h2 {
+            color: #128c7e;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #65676b;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #128c7e;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background: #128c7e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #075e54;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .messages-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e4e6eb;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+
+        .message-item {
+            padding: 10px;
+            border-bottom: 1px solid #e4e6eb;
+            font-size: 14px;
+        }
+
+        .message-item:last-child {
+            border-bottom: none;
+        }
+
+        .message-time {
+            color: #65676b;
+            font-size: 12px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #128c7e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #128c7e;
+        }
+
+        .stat-label {
+            color: #65676b;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>WhatsApp Business API 管理系统</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="dashboard">
+            <!-- 发送消息 -->
+            <div class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                    发送消息
+                </h2>
+                <form id="sendMessageForm">
+                    <div class="form-group">
+                        <label for="phoneNumber">接收方手机号码（含国家代码）</label>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="例如：8613812345678" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">消息内容</label>
+                        <textarea id="message" name="message" placeholder="输入要发送的消息..." required></textarea>
+                    </div>
+                    <button type="submit">发送消息</button>
+                    <div id="sendStatus" class="status"></div>
+                </form>
+            </div>
+
+            <!-- 发送模板消息 -->
+            <div class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                    </svg>
+                    发送模板消息
+                </h2>
+                <form id="sendTemplateForm">
+                    <div class="form-group">
+                        <label for="templatePhone">接收方手机号码</label>
+                        <input type="tel" id="templatePhone" name="templatePhone" placeholder="例如：8613812345678" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="templateName">模板名称</label>
+                        <input type="text" id="templateName" name="templateName" placeholder="输入模板名称" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="languageCode">语言代码</label>
+                        <select id="languageCode" name="languageCode">
+                            <option value="zh_CN">中文</option>
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="pt_BR">Português</option>
+                        </select>
+                    </div>
+                    <button type="submit">发送模板消息</button>
+                    <div id="templateStatus" class="status"></div>
+                </form>
+            </div>
+
+            <!-- 系统状态 -->
+            <div class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+                    </svg>
+                    系统状态
+                </h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="messagesSent">0</div>
+                        <div class="stat-label">消息已发送</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="messagesReceived">0</div>
+                        <div class="stat-label">消息已接收</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="systemStatus">在线</div>
+                        <div class="stat-label">系统状态</div>
+                    </div>
+                </div>
+                <button onclick="checkHealth()" style="margin-top: 20px;">检查系统健康状态</button>
+                <div id="healthStatus" class="status"></div>
+            </div>
+
+            <!-- 最近消息 -->
+            <div class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M6,9H18V11H6M14,14H6V12H14M18,8H6V6H18"/>
+                    </svg>
+                    最近消息
+                </h2>
+                <div class="messages-list" id="messagesList">
+                    <div class="message-item">
+                        <div>暂无消息记录</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 统计数据
+        let stats = {
+            sent: 0,
+            received: 0
+        };
+
+        // 发送消息
+        document.getElementById('sendMessageForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const message = document.getElementById('message').value;
+            const statusDiv = document.getElementById('sendStatus');
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            
+            submitButton.disabled = true;
+            submitButton.innerHTML = '发送中...<span class="loading"></span>';
+            
+            try {
+                const response = await fetch('/api/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ to: phoneNumber, message: message })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '消息发送成功！';
+                    statusDiv.style.display = 'block';
+                    
+                    // 更新统计
+                    stats.sent++;
+                    document.getElementById('messagesSent').textContent = stats.sent;
+                    
+                    // 添加到消息列表
+                    addMessageToList(`发送给 ${phoneNumber}: ${message}`, 'sent');
+                    
+                    // 清空表单
+                    e.target.reset();
+                } else {
+                    throw new Error(data.error || '发送失败');
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `错误: ${error.message}`;
+                statusDiv.style.display = 'block';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = '发送消息';
+            }
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        });
+
+        // 发送模板消息
+        document.getElementById('sendTemplateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const phoneNumber = document.getElementById('templatePhone').value;
+            const templateName = document.getElementById('templateName').value;
+            const languageCode = document.getElementById('languageCode').value;
+            const statusDiv = document.getElementById('templateStatus');
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            
+            submitButton.disabled = true;
+            submitButton.innerHTML = '发送中...<span class="loading"></span>';
+            
+            try {
+                const response = await fetch('/api/send-template', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        to: phoneNumber, 
+                        templateName: templateName,
+                        languageCode: languageCode 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '模板消息发送成功！';
+                    statusDiv.style.display = 'block';
+                    
+                    // 更新统计
+                    stats.sent++;
+                    document.getElementById('messagesSent').textContent = stats.sent;
+                    
+                    // 添加到消息列表
+                    addMessageToList(`发送模板 "${templateName}" 给 ${phoneNumber}`, 'template');
+                    
+                    // 清空表单
+                    e.target.reset();
+                } else {
+                    throw new Error(data.error || '发送失败');
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `错误: ${error.message}`;
+                statusDiv.style.display = 'block';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = '发送模板消息';
+            }
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        });
+
+        // 检查系统健康状态
+        async function checkHealth() {
+            const statusDiv = document.getElementById('healthStatus');
+            const systemStatusDiv = document.getElementById('systemStatus');
+            
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = data.message;
+                    statusDiv.style.display = 'block';
+                    systemStatusDiv.textContent = '在线';
+                    systemStatusDiv.style.color = '#128c7e';
+                } else {
+                    throw new Error('系统检查失败');
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `错误: ${error.message}`;
+                statusDiv.style.display = 'block';
+                systemStatusDiv.textContent = '离线';
+                systemStatusDiv.style.color = '#dc3545';
+            }
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // 添加消息到列表
+        function addMessageToList(message, type) {
+            const messagesList = document.getElementById('messagesList');
+            const now = new Date().toLocaleString('zh-CN');
+            
+            // 如果是第一条消息，清空默认内容
+            if (messagesList.children.length === 1 && messagesList.children[0].textContent === '暂无消息记录') {
+                messagesList.innerHTML = '';
+            }
+            
+            const messageItem = document.createElement('div');
+            messageItem.className = 'message-item';
+            messageItem.innerHTML = `
+                <div>${message}</div>
+                <div class="message-time">${now}</div>
+            `;
+            
+            messagesList.insertBefore(messageItem, messagesList.firstChild);
+            
+            // 限制显示最近20条消息
+            if (messagesList.children.length > 20) {
+                messagesList.removeChild(messagesList.lastChild);
+            }
+        }
+
+        // 页面加载时检查系统状态
+        window.addEventListener('load', () => {
+            checkHealth();
+        });
+
+        // 定期检查系统状态
+        setInterval(checkHealth, 60000); // 每分钟检查一次
+    </script>
+</body>
+</html>
